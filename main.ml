@@ -20,6 +20,20 @@ let collapse toks =
   let (buf, acc) = List.fold_left f ((Buffer.create 200), []) toks in
   String (Buffer.contents buf) :: acc |> List.rev
 
+let trim toks =
+  (* takes "<% ... %>\n" and removes trailing newlines *)
+  (* also works for "<%=yield ... %>\n" *)
+  let is_trailing str = '\n' = str.[0] in
+  let trim str = String.sub str 1 ((String.length str) - 1) in
+  let rec p = function
+    | Open t :: String s :: q when is_trailing s ->
+      Open t :: String (trim s) :: p q
+    | Open_y t :: String s :: q when (is_trailing s) ->
+      Open_y t :: String (trim s) :: p q
+    | h::q -> h :: p q
+    | [] -> [] in
+  p toks
+
 let prologue () =
   print_endline "let print ?(f = fun s -> print_string s; flush stdout) param ="
 
@@ -37,6 +51,6 @@ let () =
     | String s :: t -> printf "let () = f \"%s\" in \n" s; p t
     | Ch c :: t -> (); p t
     | Eof :: t | t -> () in
-  prog Lexer.tokens lex |> collapse |> p;
+  prog Lexer.tokens lex |> collapse |> trim |> p;
   epilogue ();
   print_printer ()
