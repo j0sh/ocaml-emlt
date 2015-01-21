@@ -1,3 +1,7 @@
+just some
 <% hello world %>
+    surrounding
 <%= hello there %>
+text !!!
 <%yield hallo %>
+HOW WONDERFUL
