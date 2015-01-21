@@ -16,4 +16,4 @@ opener: OPEN { Open $1 } | OPEN_P { Open_p $1 } | OPEN_Y { Open_y $1 }
 
 tok:
 | CH { Ch $1 }
-| opener tok { $1 }
+| opener { $1 }
