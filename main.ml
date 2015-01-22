@@ -11,6 +11,8 @@ open Printf
 
 let print = ref false
 
+let oc = ref stdout
+
 let opts = [
   "-p",
   Arg.Set print,
@@ -38,22 +40,24 @@ let yields toks =
 let prologue (y : string list) : unit =
   let f = sprintf "?(%s = fun () -> ())" in
   let z = List.map f y |> String.concat " " in
-  print_endline ("let print ?(f = fun s -> print_string s; flush stdout) " ^
-  z ^ " param =")
+  fprintf !oc "let print ?(f = fun s -> print_string s; flush stdout) %s param
+= " z
 
-let epilogue () = print_endline "()"
+let epilogue () = fprintf !oc "()\n"
 
-let print_printer () = print_endline "let () = print ()"
+let print_printer () = fprintf !oc "let () = print ()\n"
+
 
 let () =
   Arg.parse opts (fun x -> ()) usage;
   let lex = Lexing.from_channel stdin in
+  let emit = fprintf !oc in
   let rec p = function
-    | Open s :: t -> print_endline s; p t
-    | Open_p s :: t -> printf "let () = f (%s) in \n"s ; p t
-    | Open_y s :: t -> printf "let () = %s () in \n" s; p t
-    | String s :: t -> printf "let () = f \"%s\" in \n" s; p t
-    | Fn (f, s) :: t -> printf "let %s () = f \"%s\" in\n" f s; p t
+    | Open s :: t -> emit "%s\n" s; p t
+    | Open_p s :: t -> emit "let () = f (%s) in \n"s ; p t
+    | Open_y s :: t -> emit "let () = %s () in \n" s; p t
+    | String s :: t -> emit "let () = f \"%s\" in \n" s; p t
+    | Fn (f, s) :: t -> fprintf !oc "let %s () = f \"%s\" in\n" f s; p t
     | Ch c :: t -> (); p t
     | Eof :: t | t -> () in
   let toks = prog Lexer.tokens lex |> collapse in
