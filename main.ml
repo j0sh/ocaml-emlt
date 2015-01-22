@@ -20,37 +20,32 @@ let collapse toks =
   let (buf, acc) = List.fold_left f ((Buffer.create 200), []) toks in
   String (Buffer.contents buf) :: acc |> List.rev
 
-let trim toks =
-  (* takes "<% ... %>\n" and removes trailing newlines *)
-  (* also works for "<%=yield ... %>\n" *)
-  let is_trailing str = '\n' = str.[0] in
-  let trim str = String.sub str 1 ((String.length str) - 1) in
-  let rec p = function
-    | Open t :: String s :: q when is_trailing s ->
-      Open t :: String (trim s) :: p q
-    | Open_y t :: String s :: q when (is_trailing s) ->
-      Open_y t :: String (trim s) :: p q
-    | h::q -> h :: p q
-    | [] -> [] in
-  p toks
+let yields toks =
+  let f acc = function Open_y h -> h::acc | _ -> acc in
+  List.fold_left f [] toks |> List.rev
 
-let prologue () =
-  print_endline "let print ?(f = fun s -> print_string s; flush stdout) param ="
+let prologue (y : string list) : unit =
+  let f = sprintf "?(%s = fun () -> ())" in
+  let z = List.map f y |> String.concat " " in
+  print_endline ("let print ?(f = fun s -> print_string s; flush stdout) " ^
+  z ^ " param =")
 
 let epilogue () = print_endline "()"
 
 let print_printer () = print_endline "let () = print ()"
 
 let () =
-  prologue ();
   let lex = Lexing.from_channel stdin in
   let rec p = function
     | Open s :: t -> print_endline s; p t
     | Open_p s :: t -> printf "let () = f (%s) in \n"s ; p t
-    | Open_y s :: t -> printf "main/open/yield %s\n" s; p t
+    | Open_y s :: t -> printf "let () = %s () in \n" s; p t
     | String s :: t -> printf "let () = f \"%s\" in \n" s; p t
+    | Fn (f, s) :: t -> printf "let %s () = f \"%s\" in\n" f s; p t
     | Ch c :: t -> (); p t
     | Eof :: t | t -> () in
-  prog Lexer.tokens lex |> collapse |> trim |> p;
+  let toks = prog Lexer.tokens lex |> collapse in
+  prologue (yields toks);
+  p toks;
   epilogue ();
   print_printer ()

@@ -1,0 +1,6 @@
+<%for foo %>
+def
+<% end %>
+abc
+<%yield foo %>
+ghi
