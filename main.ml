@@ -9,6 +9,17 @@ open Parser
 open Types
 open Printf
 
+let print = ref false
+
+let opts = [
+  "-p",
+  Arg.Set print,
+  "Call the printer within the generated code.";
+]
+
+let usage =
+  sprintf "Usage: %s -[p] ... " (Sys.argv.(0))
+
 let collapse toks =
   (* takes [Ch a; Ch b; Ch c;] and converts into [String abc] *)
   let f (buf, acc) = function
@@ -35,6 +46,7 @@ let epilogue () = print_endline "()"
 let print_printer () = print_endline "let () = print ()"
 
 let () =
+  Arg.parse opts (fun x -> ()) usage;
   let lex = Lexing.from_channel stdin in
   let rec p = function
     | Open s :: t -> print_endline s; p t
@@ -48,4 +60,4 @@ let () =
   prologue (yields toks);
   p toks;
   epilogue ();
-  print_printer ()
+  if !print then print_printer ();
