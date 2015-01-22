@@ -10,15 +10,20 @@ open Types
 open Printf
 
 let print = ref false
+let exec = ref false
 
 let opts = [
   "-p",
   Arg.Set print,
   "Call the printer within the generated code.";
+  "-x",
+  Arg.Set exec,
+  "Execute the generated code and print results to stdout."
 ]
 
 let usage =
-  sprintf "Usage: %s -[p] ... " (Sys.argv.(0))
+  let s = sprintf "Usage: %s -[px] ... " (Sys.argv.(0)) in
+  s
 
 let collapse toks =
   (* takes [Ch a; Ch b; Ch c;] and converts into [String abc] *)
@@ -46,12 +51,29 @@ let epilogue emit = emit "()\n"
 
 let print_printer emit = emit  "let () = print ()\n"
 
-let execute emit = ()
+let execute buf =
+  let (fname, oc) = Filename.open_temp_file "emlt" "eml" in
+  Buffer.contents buf |> output_string oc;
+  close_out oc;
+  let ob = Buffer.create 1000 in
+  let ic = Unix.open_process_in (sprintf "ocaml %s" fname) in
+  begin try while true do
+    Buffer.add_char ob (input_char ic)
+  done with End_of_file ->
+    let finish () = Sys.remove fname in
+    match Unix.close_process_in ic with
+    | Unix.WEXITED 0 -> finish ()
+    | Unix.WEXITED n -> finish (); exit n
+    | _ -> finish (); exit 2
+  end;
+  Buffer.output_buffer stdout ob
 
 let () =
   Arg.parse opts (fun x -> ()) usage;
   let lex = Lexing.from_channel stdin in
-  let emit = print_string in
+  let buf = Buffer.create (if !exec then 2000 else 0) in
+  let emit = if !exec then Buffer.add_string buf
+    else print_string in
   let rec p = function
     | Open s :: t -> emit (sprintf "%s\n" s); p t
     | Open_p s :: t -> emit (sprintf "let () = f (%s) in\n" s) ; p t
@@ -64,4 +86,5 @@ let () =
   prologue (yields toks) emit;
   p toks;
   epilogue emit;
-  if !print then print_printer emit;
+  if !print || !exec then print_printer emit;
+  if !exec then execute buf;
