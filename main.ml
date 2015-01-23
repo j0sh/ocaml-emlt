@@ -40,14 +40,28 @@ let yields toks =
   let f acc = function Open_y h -> h::acc | _ -> acc in
   List.fold_left f [] toks |> List.rev
 
-let prologue (y : string list) emit : unit =
+let fors toks =
+  let f acc = function Fn (h, _) -> (String.trim h) :: acc | _ -> acc in
+  List.fold_left f [] toks |> List.rev
+
+let prologue toks emit =
   let f = sprintf "?(%s = fun () -> ())" in
-  let z = List.map f y |> String.concat " " in
-  let z = sprintf "let print ?(f = fun s -> print_string s; flush stdout) %s param
-= " z in
+  let z = List.map f (yields toks) |> String.concat " " in
+  let fors = fors toks in
+  let fl = List.length fors > 0 in
+  let fs = if fl then "?layout ?layout_with " else "" in
+  let z = sprintf "let print ?(f = fun s -> print_string s; flush stdout) %s %sparam =\n"
+      z fs in
   emit z
 
-let epilogue emit = emit "()\n"
+let epilogue toks emit =
+  let fors = fors toks in
+  let fl = List.length fors > 0 in
+  let fm = List.map (fun s -> sprintf "?%s:(Some %s)" s s) fors in
+  let fm = String.concat " " fm in
+  let z = if fl then "match layout with Some layout -> layout ?f:(Some f) "
+      ^ fm ^ " () | None ->\nbegin match layout_with with Some (layout, p) -> layout ?f:(Some f) " ^ fm ^ "p | None -> () end\n" else "()\n" in
+  emit z
 
 let print_printer emit = emit  "let () = print ()\n"
 
@@ -83,8 +97,8 @@ let () =
     | Ch c :: t -> (); p t
     | Eof :: t | t -> () in
   let toks = prog Lexer.tokens lex |> collapse in
-  prologue (yields toks) emit;
+  prologue toks emit;
   p toks;
-  epilogue emit;
+  epilogue toks emit;
   if !print || !exec then print_printer emit;
   if !exec then execute buf;
