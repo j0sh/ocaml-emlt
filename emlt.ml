@@ -49,7 +49,7 @@ let prologue toks emit =
   let z = List.map f (yields toks) |> String.concat " " in
   let fors = fors toks in
   let fl = List.length fors > 0 in
-  let fs = if fl then "?layout ?layout_with " else "" in
+  let fs = if fl then "?layout " else "" in
   let z = sprintf "let print ?(f = fun s -> print_string s; flush stdout) %s %sparam =\n"
       z fs in
   emit z
@@ -59,8 +59,8 @@ let epilogue toks emit =
   let fl = List.length fors > 0 in
   let fm = List.map (fun s -> sprintf "?%s:(Some %s)" s s) fors in
   let fm = String.concat " " fm in
-  let z = if fl then "match layout with Some layout -> layout ?f:(Some f) "
-      ^ fm ^ " () | None ->\nbegin match layout_with with Some (layout, p) -> layout ?f:(Some f) " ^ fm ^ "p | None -> () end\n" else "()\n" in
+  let z = if fl then "match layout with Some (layout, p) -> layout ?f:(Some f) "
+      ^ fm ^ " p | None -> ()\n" else "()\n" in
   emit z
 
 let print_printer emit = emit  "let () = print ()\n"
