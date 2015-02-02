@@ -1,0 +1,75 @@
+emlt: Embedded ocaML Templates, a tiny templating toolkit for OCaml
+
+emlt is a preprocessor inspired by Ruby's erb [1] and camlmix [2].
+
+emlt takes a template as input from stdin, and outputs the rendered
+template as OCaml code on stdout.
+
+The template can be invoked via a 'print' function, which generally
+has the following signature:
+
+    val print : ?f :(string -> unit) ->  'a -> unit
+
+`f` defaults to Pervasives.print_string, and prints results to stdout,
+but it is easy to supply a `f` to write to a buffer or out channel.
+
+The `print` signature may vary depending on any `yield` or `for` statements
+in the template, which are explained below.
+
+emlt can directly execute the generated code by passing the -x option.
+This does not work with multi-file templates at the moment.
+
+Basic Usage:
+
+    <% let foo = "Executes any OCaml code here" in  %>
+
+    <%= foo ^ " and expects a string in return, which will be printed" %>
+
+Yield Statements
+
+    <%yield message %>
+
+will print the contents of "message". This is useful with
+multi-file setups, eg having a master layout yielding content to
+child templates.
+
+Yields alter the signature of `print` by inserting an optional
+function that will be invoked at the place of the yield statement.
+
+For example, `<%yield message %>` results in the following signature:
+
+    val print : ?f:(string -> unit) -> ?message:(unit -> unit) -> 'a -> unit
+
+For Statements
+
+    <%for message %>
+
+        Binds this text to a value named "message"
+
+    <% end %> 
+
+an 'end' completes the binding.
+
+`for` statements alter the definition of `print` by inserting an
+optional function corresponding to the print function of the
+yielding template. This allows invocation of child templates
+directly while simply passing in the master layout. Fors result in
+the following print signature:
+
+    val : ?f(string -> unit) ->
+        ?layout:((?f:(string -> unit) -> ?message:(unit -> unit) -> 'a -> unit) * 'a) ->
+        'b -> unit
+
+The optional layout tuple `(g, p)` consists of a parameter `g` that
+corresponds to the print function of the yielding template, and the
+arguments, `p`, of `g`. When invoking `g`, the compiler will also
+insert any relevant parameters, such as the printing function `f`
+and any yields such as `message`. Internally, this invocation is
+roughly as follows:
+
+    g ~f ~message p
+
+References
+
+[1] http://en.wikipedia.org/wiki/ERuby
+[2] http://mjambon.com/camlmix/
