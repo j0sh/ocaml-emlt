@@ -37,6 +37,12 @@ let collapse toks =
   let (buf, acc) = List.fold_left f ((Buffer.create 200), []) toks in
   String (Buffer.contents buf) :: acc |> List.rev
 
+let fn_collapse toks =
+  let f = function
+    | Fn (s,l) -> Fn (s, (collapse l))
+    | t -> t in
+  List.map f toks
+
 let yields toks =
   let f acc = function Open_y h -> h::acc | _ -> acc in
   List.fold_left f [] toks |> List.rev
@@ -94,10 +100,10 @@ let () =
     | Open_p s :: t -> emit (sprintf "let () = f (%s) in\n" s) ; p t
     | Open_y s :: t -> emit (sprintf "let () = %s () in\n" s); p t
     | String s :: t -> emit (sprintf "let () = f \"%s\" in\n" s); p t
-    | Fn (f, s) :: t -> emit (sprintf "let %s () = f \"%s\" in\n" f s); p t
+    | Fn (f, l) :: t -> emit (sprintf "let %s () = " f); p l; emit "() in\n"; p t
     | Ch c :: t -> (); p t
     | Eof :: t | t -> () in
-  let toks = prog Lexer.tokens lex |> collapse in
+  let toks = prog Lexer.tokens lex |> collapse |> fn_collapse in
   prologue toks emit;
   p toks;
   epilogue toks emit;
