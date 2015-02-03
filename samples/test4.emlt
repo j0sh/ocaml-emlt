@@ -1,0 +1,6 @@
+<% let foo = "HELLO, WORLD" in %>
+
+<%for bar %>
+the message says: "<%=foo %>" in the bottle<% end %>
+
+they found a bottle, and the captain wrote: "<%yield bar %>"
