@@ -27,8 +27,9 @@ let usage =
 
 let collapse toks =
   (* takes [Ch a; Ch b; Ch c;] and converts into [String abc] *)
+  let quot buf c = if c = '"' then Buffer.add_char buf '\\' in
   let f (buf, acc) = function
-    | Ch a -> Buffer.add_char buf a; (buf, acc)
+    | Ch a -> quot buf a; Buffer.add_char buf a; (buf, acc)
     | b -> begin if Buffer.length buf > 0 then
               ((Buffer.create 200), b::(String (Buffer.contents buf))::acc)
             else (buf, b::acc)

@@ -3,7 +3,8 @@
 
   let chars2str chars =
     let buf = Buffer.create 200 in
-    List.iter (Buffer.add_char buf) chars;
+    let add = Buffer.add_char buf in
+    List.iter (fun c -> if c = '"' then add '\\'; add c;) chars;
     Buffer.contents buf
 %}
 
