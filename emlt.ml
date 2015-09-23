@@ -11,6 +11,7 @@ open Printf
 
 let print = ref false
 let exec = ref false
+let layout = ref ""
 
 let opts = [
   "-p",
@@ -18,11 +19,14 @@ let opts = [
   "Call the printer within the generated code.";
   "-x",
   Arg.Set exec,
-  "Execute the generated code and print results to stdout."
+  "Execute the generated code and print results to stdout.";
+  "-l",
+  Arg.Set_string layout,
+  "Set the postprocessed EMLT file <string> as a layout to the input."
 ]
 
 let usage =
-  let s = sprintf "Usage: %s -[px] ... " (Sys.argv.(0)) in
+  let s = sprintf "Usage: %s -[px] [-l <string>] ... " (Sys.argv.(0)) in
   s
 
 let collapse toks =
@@ -70,7 +74,11 @@ let epilogue toks emit =
       ^ fm ^ " p | None -> ()\n" else "()\n" in
   emit z
 
-let print_printer emit = emit  "let () = print ()\n"
+let print_printer layout emit =
+  let layout = if "" <> layout
+    then sprintf "~layout:(%s.print, ())" layout
+    else layout in
+  emit  (sprintf "let () = print %s ()\n" layout)
 
 let execute buf =
   let (fname, oc) = Filename.open_temp_file "emlt" "eml" in
@@ -107,5 +115,5 @@ let () =
   prologue toks emit;
   p toks;
   epilogue toks emit;
-  if !print || !exec then print_printer emit;
+  if !print || !exec then print_printer !layout emit;
   if !exec then execute buf;

@@ -17,7 +17,18 @@ The `print` signature may vary depending on any `yield` or `for` statements
 in the template, which are explained below.
 
 emlt can directly execute the generated code by passing the -x option.
-This does not work with multi-file templates at the moment.
+At the moment, this does not work with multi-file templates (templates
+containing a layout.)
+
+emlt can also call the printer directly in the generated code with the -p
+option, which will lead to immediate printing after the generated code is
+compiled and run. A pre-generated layout file can be specified with the -l
+option. For example, taking the master-child sample from the `samples` folder:
+
+  emlt < samples/master.emlt > master.ml
+  emlt -p -l Master < samples.child.emlt > child.ml
+  ocamlc -o example master.ml child.ml
+  ./example
 
 Basic Usage:
 
@@ -46,7 +57,7 @@ For Statements
 
         Binds this text to a value named "message"
 
-    <% end %> 
+    <% end %>
 
 an 'end' completes the binding.
 
