@@ -1,6 +1,5 @@
 %{
   open Types
-
 %}
 
 %token EOF CLOSE_F
